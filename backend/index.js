@@ -18,7 +18,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/stripe', stripeRoutes);
-app.use('/api/users', userRoutes)
+app.use('/api/auth', userRoutes)
 
 const initializeApp = async () => {
   try {

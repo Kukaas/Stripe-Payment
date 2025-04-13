@@ -50,6 +50,12 @@ export const loginUser = async (req, res) => {
 
         const token = generateJWT(user.id); // Generate JWT token
 
+        res.cookie("access_token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // Set to true if using HTTPS
+            sameSite: "Strict",
+        });
+
         res.status(200).json({ message: "Login successful", user: {
             id: user.id,
             name: user.name,
