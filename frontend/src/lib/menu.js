@@ -9,6 +9,5 @@ export const publicMenu = [
 // Navigation menu items for authenticated users (for future use)
 export const userMenu = [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/account", label: "My Account" },
-    { href: "/subscriptions", label: "Subscriptions" },
+    { href: "/payment", label: "Subscription" },
 ];
