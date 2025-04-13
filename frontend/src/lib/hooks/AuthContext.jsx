@@ -18,12 +18,23 @@ const Loading = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [subscription, setSubscription] = useState(null);
 
     useEffect(() => {
         const fetchUser = async () => {
             try {
                 const response = await api.get("/auth/me", { withCredentials: true });
                 setUser(response.data.user);
+                
+                // Extract subscription data from user
+                if (response.data.user && response.data.user.is_subscribed) {
+                    setSubscription({
+                        isActive: response.data.user.is_subscribed,
+                        planStatus: response.data.user.stripe_plan_status,
+                        subscriptionEndsAt: response.data.user.subscription_ends_at,
+                        priceId: response.data.user.stripe_price_id
+                    });
+                }
             } catch (error) {
                 console.error("Error fetching user:", error);
             } finally {
@@ -34,8 +45,41 @@ export const AuthProvider = ({ children }) => {
         fetchUser();
     }, []);
 
+    const refreshUserData = async () => {
+        // Use a state flag to prevent multiple simultaneous refreshes
+        if (isRefreshing.current) return;
+        
+        try {
+            setLoading(true);
+            const response = await api.get("/auth/me", { withCredentials: true });
+            setUser(response.data.user);
+            
+            if (response.data.user && response.data.user.is_subscribed) {
+                setSubscription({
+                    isActive: response.data.user.is_subscribed,
+                    planStatus: response.data.user.stripe_plan_status,
+                    subscriptionEndsAt: response.data.user.subscription_ends_at,
+                    priceId: response.data.user.stripe_price_id
+                });
+            } else {
+                setSubscription(null);
+            }
+        } catch (error) {
+            console.error("Error refreshing user data:", error);
+        } finally {
+            setLoading(false);
+            isRefreshing.current = false;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{user, setUser, loading}}>
+        <AuthContext.Provider value={{
+            user, 
+            setUser, 
+            loading,
+            subscription,
+            refreshUserData
+        }}>
             {loading ? <Loading /> : children}
         </AuthContext.Provider>
     )

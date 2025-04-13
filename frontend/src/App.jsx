@@ -14,6 +14,7 @@ import PublicRoute from './components/PublicRoutes'
 
 
 import Dashboard from './pages/private/Dashboard'
+import Profile from './pages/private/Profile'
 
 function App() {
 
@@ -27,8 +28,6 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Welcome />} />
-          <Route path="/success" element={<Success />} />
-          <Route path="/cancel" element={<Cancel />} />
         </Route>
 
 
@@ -36,6 +35,9 @@ function App() {
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/payment" element={<Subscription />} />
+          <Route path="/success" element={<Success />} />
+          <Route path="/cancel" element={<Cancel />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
       </Routes>
    </BrowserRouter>

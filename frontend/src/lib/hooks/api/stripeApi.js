@@ -1,16 +1,30 @@
-import axios from "axios";
+import api from "../api";
 
-const baseUrl = import.meta.env.VITE_API_URL;
-
-export const createCheckoutSession = async (priceId) => {
+export const createCheckoutSession = async (priceId, userId) => {
     try {
-        const response = await axios.post(`${baseUrl}/stripe/create-checkout-session`, {
+        const response = await api.post("/stripe/create-checkout-session", {
             priceId,
+            userId
+        }, {
+            withCredentials: true
         });
+        
         return response.data.url;
-    }
-    catch (error) {
+    } catch (error) {
         console.error("Error creating checkout session:", error);
-        throw new Error("Failed to create checkout session");
+        throw error;
     }
-}
+};
+
+export const getSubscriptionDetails = async () => {
+    try {
+        const response = await api.get("/stripe/subscription", {
+            withCredentials: true
+        });
+        
+        return response.data;
+    } catch (error) {
+        console.error("Error getting subscription details:", error);
+        throw error;
+    }
+};

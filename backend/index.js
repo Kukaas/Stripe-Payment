@@ -21,13 +21,36 @@ app.use(
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+    allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin", "stripe-signature"],
   })
 )
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/stripe/webhook') {
+    let rawBody = '';
+    req.on('data', (chunk) => {
+      rawBody += chunk.toString();
+    });
+    req.on('end', () => {
+      req.rawBody = rawBody;
+      next();
+    });
+  } else {
+    next();
+  }
+});
+
+app.use((req, res, next) => {
+  if(req.originalUrl === '/api/stripe/webhook') {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+})
+
+app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/auth', userRoutes)
