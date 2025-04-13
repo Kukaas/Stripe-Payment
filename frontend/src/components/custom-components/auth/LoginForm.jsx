@@ -59,6 +59,8 @@ export function LoginForm() {
             console.error("Login failed:", error);
             if (error.response && error.response.status === 401) {
                 toast.error("Invalid email or password.");
+            } else if (error.response && error.response.status === 403) {
+              toast.error(error.response.data.message);
             } else {
                 toast.error("An unexpected error occurred. Please try again later.");
             }

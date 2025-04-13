@@ -15,6 +15,7 @@ import PublicRoute from './components/PublicRoutes'
 
 import Dashboard from './pages/private/Dashboard'
 import Profile from './pages/private/Profile'
+import VerifyEmail from './pages/auth/VerifyEmail'
 
 function App() {
 
@@ -28,6 +29,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Welcome />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
         </Route>
 
 

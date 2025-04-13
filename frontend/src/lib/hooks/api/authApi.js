@@ -16,6 +16,22 @@ export const registerUser = async (name, email, password) => {
     }
 }
 
+export const verifyEmail = async (token) => {
+    try {
+        const response = await api.get("/auth/verify-email", {
+            params: { token }
+        });
+        return response;
+    } catch (error) {
+        console.error("Email verification error:", {
+            status: error.response?.status,
+            message: error.response?.data?.message,
+            token: token
+        });
+        throw error; // Let the component handle the error
+    }
+};
+
 export const loginUser = async (email, password) => {
     try {
         const response = await api.post("/auth/login", {

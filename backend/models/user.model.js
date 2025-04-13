@@ -1,15 +1,37 @@
 import { v4 as uuidv4 } from 'uuid';
 import promisePool from '../config/db.config.js';
 
-export async function createUser({name, email, password}) {
+export async function createUser({name, email, password, verification_token, verification_token_expires}) {
     const userId = uuidv4();
 
-    await promisePool.query(
-        `INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)`,
-        [userId, name, email, password]
+    const [result] = await promisePool.query(
+        `INSERT INTO users (
+            id, 
+            name, 
+            email, 
+            password, 
+            verification_token, 
+            verification_token_expires
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+            userId, 
+            name, 
+            email, 
+            password, 
+            verification_token, 
+            verification_token_expires
+        ]
     );
 
-    return { id: userId, name, email };
+    // Return user without sensitive information
+    return { 
+        id: userId, 
+        name, 
+        email,
+        email_verified: false,
+        verification_token,
+        verification_token_expires
+    };
 }
 
 export const getUserByEmail = async (email) => {

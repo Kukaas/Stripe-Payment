@@ -8,6 +8,9 @@ export async function createUsersTable() {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_token VARCHAR(64),
+        verification_token_expires DATETIME,
   
         stripe_customer_id VARCHAR(255),
         stripe_subscription_id VARCHAR(255),
