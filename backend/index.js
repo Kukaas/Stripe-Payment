@@ -1,10 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import mysql from 'mysql2';
 
 // Routes
 import stripeRoutes from './routes/stripe.routes.js';
+import userRoutes from './routes/user.route.js';
+
 import promisePool from './config/db.config.js';
 
 dotenv.config();
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/users', userRoutes)
 
 const initializeApp = async () => {
   try {
