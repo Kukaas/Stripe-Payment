@@ -71,6 +71,16 @@ export const loginUser = async (req, res) => {
     }
 }
 
+export const logoutUser = async (req, res) => {
+    try {
+        res.clearCookie("access_token", { path: "/" }); // Clear the cookie
+        res.status(200).json({ message: "Logout successful" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export const getMe = async (req, res) => {
     try {
         const userId = req.user.id; // Get user ID from the token

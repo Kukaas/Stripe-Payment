@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { publicMenu } from "@/lib/menu";
+import { publicMenu, userMenu } from "@/lib/menu";
 import { Link, useLocation } from "react-router-dom";
 import { ModeToggle } from "./ThemeToggle";
+import { useAuth } from "@/lib/hooks/AuthContext";
 
 const Header = () => {
+    const {user} = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
     
@@ -37,7 +39,7 @@ const Header = () => {
             <nav className="hidden md:block">
                 <div className="flex items-center space-x-8">
                     <ul className="flex space-x-8">
-                        {publicMenu.map((link, index) => (
+                        {!user ? publicMenu.map((link, index) => (
                             <li key={index}>
                                 <Link 
                                     to={link.href}
@@ -53,7 +55,25 @@ const Header = () => {
                                     )}
                                 </Link>
                             </li>
-                        ))}
+                        )) : (
+                            userMenu.map((link, index) => (
+                                <li key={index}>
+                                    <Link 
+                                        to={link.href}
+                                        className={`relative py-2.5 px-1 text-sm tracking-wide transition-colors outline-none ${
+                                            isActive(link.href) 
+                                                ? "text-foreground font-medium" 
+                                                : "text-muted-foreground hover:text-foreground/80"
+                                        }`}
+                                    >
+                                        {link.label}
+                                        {isActive(link.href) && (
+                                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-foreground"></span>
+                                        )}
+                                    </Link>
+                                </li>
+                            ))
+                        )}
                     </ul>
                     <ModeToggle />
                 </div>
@@ -82,7 +102,7 @@ const Header = () => {
                             </h2>
                                 <nav>
                                     <ul className="space-y-7">
-                                        {publicMenu.map((link, index) => (
+                                        {!user ? publicMenu.map((link, index) => (
                                             <li key={index}>                                                <Link
                                                     to={link.href}
                                                     onClick={() => setIsOpen(false)}
@@ -98,7 +118,26 @@ const Header = () => {
                                                     )}
                                                 </Link>
                                             </li>
-                                        ))}
+                                        )): (
+                                            userMenu.map((link, index) => (
+                                                <li key={index}>
+                                                    <Link
+                                                        to={link.href}
+                                                        onClick={() => setIsOpen(false)}
+                                                        className={`block py-1 transition-colors text-lg ${
+                                                            isActive(link.href) 
+                                                                ? "text-foreground font-medium" 
+                                                                : "text-muted-foreground hover:text-foreground/80"
+                                                        }`}
+                                                    >
+                                                        {link.label}
+                                                        {isActive(link.href) && (
+                                                            <span className="inline-block ml-2 w-1 h-1 rounded-full bg-foreground"></span>
+                                                        )}
+                                                    </Link>
+                                                </li>
+                                            ))
+                                        )}
                                     </ul>                                    
                                 </nav>
                             </div>

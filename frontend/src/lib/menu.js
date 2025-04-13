@@ -11,5 +11,4 @@ export const userMenu = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/account", label: "My Account" },
     { href: "/subscriptions", label: "Subscriptions" },
-    { href: "/logout", label: "Logout" }
 ];
