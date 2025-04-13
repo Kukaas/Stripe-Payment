@@ -1,8 +1,31 @@
 import Layout from "../Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/hooks/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
 
 const Success = () => {
+  const { refreshUserData } = useAuth();
+  const navigate = useNavigate();
+  const hasRefreshedRef = useRef(false);
+
+  useEffect(() => {
+    // Only refresh user data once
+    if (!hasRefreshedRef.current) {
+      const updateUserData = async () => {
+        try {
+          await refreshUserData();
+        } catch (error) {
+          console.error("Failed to refresh user data:", error);
+        }
+        // Mark as refreshed regardless of success/failure to prevent loops
+        hasRefreshedRef.current = true;
+      };
+      
+      updateUserData();
+    }
+  }, [refreshUserData]);
   return (
     <Layout>
       <div className="flex justify-center items-center h-full w-full px-4">        
@@ -26,7 +49,7 @@ const Success = () => {
               A confirmation email has been sent to your registered email address with all the details.
             </p>              <Button 
               className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 transition-all duration-300 text-white"
-              onClick={() => window.location.href = '/'}
+              onClick={() => navigate("/dashboard")}
             >
               Go to Dashboard
             </Button>

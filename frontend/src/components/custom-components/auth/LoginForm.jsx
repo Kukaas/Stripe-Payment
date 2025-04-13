@@ -6,7 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField } from "@/components/ui/form";
 import { FormInput } from "@/components/custom-components/FormInput";
 import CustomButton from "../CustomButton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "@/lib/hooks/api/authApi";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/hooks/AuthContext";
 
 // Define the form schema with Zod for validation
 const formSchema = z.object({
@@ -20,41 +23,54 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+    const {setUser} = useAuth();
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
 
   // Initialize the form with React Hook Form and Zod validation
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+    const form = useForm({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+        email: "",
+        password: "",
+        },
+    });
 
-  // Form submission handler
-  async function onSubmit(values) {
-    setIsLoading(true);
-    
-    try {
-      // Here you would typically call your API to authenticate the user
-      console.log("Form values:", values);
-      
-      // Simulate API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Redirect to dashboard or home page after successful login
-      // window.location.href = "/dashboard";
-    } catch (error) {
-      console.error("Login failed:", error);
-    } finally {
-      setIsLoading(false);
+    // Form submission handler
+    async function onSubmit(values) {
+        setIsLoading(true);
+        
+        try {
+            const { email, password } = values;
+
+            if (!email || !password) {
+                toast.error("Please fill in all fields.");
+                return;
+            }
+
+            const res = await loginUser(email, password);
+
+            if(res.status === 200) {
+              navigate("/dashboard");
+              setUser(res.data.user);
+              toast.success("Login successful!");
+            }
+        } catch (error) {
+            console.error("Login failed:", error);
+            if (error.response && error.response.status === 401) {
+                toast.error("Invalid email or password.");
+            } else {
+                toast.error("An unexpected error occurred. Please try again later.");
+            }
+        } finally {
+            setIsLoading(false);
+        }
     }
-  }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">        <FormField
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">        
+        <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
@@ -89,7 +105,8 @@ export function LoginForm() {
           >
             Forgot password?
           </a>
-        </div>        <CustomButton
+        </div>        
+        <CustomButton
           type="submit"
           variant="gradient"
           size="lg"

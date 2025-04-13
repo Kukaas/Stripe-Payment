@@ -6,7 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField } from "@/components/ui/form";
 import { FormInput } from "@/components/custom-components/FormInput";
 import CustomButton from "@/components/custom-components/CustomButton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { registerUser } from "@/lib/hooks/api/authApi";
+import { toast } from "sonner";
 
 // Define the form schema with Zod for validation
 const formSchema = z.object({
@@ -29,38 +31,50 @@ const formSchema = z.object({
 });
 
 export function RegisterForm() {
-  const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize the form with React Hook Form and Zod validation
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
+    // Initialize the form with React Hook Form and Zod validation
+    const form = useForm({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        },
+    });
 
-  // Form submission handler
-  async function onSubmit(values) {
-    setIsLoading(true);
-    
-    try {
-      // Here you would typically call your API to register the user
-      console.log("Form values:", values);
-      
-      // Simulate API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Redirect to login page after successful registration
-      // window.location.href = "/login";
-    } catch (error) {
-      console.error("Registration failed:", error);
-    } finally {
-      setIsLoading(false);
+    // Form submission handler
+    async function onSubmit(values) {
+        setIsLoading(true);
+        
+        try {
+            const { name, email, password } = values;
+
+            if (password !== values.confirmPassword) {
+                toast.error("Passwords do not match.");
+                return;
+            }
+
+            // Simulate an API call for registration
+            const res = await registerUser(name, email, password);
+
+            if(res.status === 201) {
+                toast.success("Registration successful!");
+                navigate("/login"); 
+            }
+        } catch (error) {
+            console.error("Registration failed:", error);
+            const errorMessage = error.response?.data?.message || "Registration failed. Please try again.";
+
+            if(error.response?.status === 400) {
+                toast.error(errorMessage);
+            }
+        } finally {
+            setIsLoading(false);
+        }
     }
-  }
 
   return (
     <Form {...form}>
