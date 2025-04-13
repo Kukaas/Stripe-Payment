@@ -2,13 +2,19 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { publicMenu, userMenu } from "@/lib/menu";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ModeToggle } from "./ThemeToggle";
 import { useAuth } from "@/lib/hooks/AuthContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { toast } from "sonner";
+import { logoutUser } from "@/lib/hooks/api/authApi";
 
 const Header = () => {
-    const {user} = useAuth();
+    const {user, setUser} = useAuth();
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
     const location = useLocation();
     
     // Function to check if the menu item is active
@@ -28,6 +34,25 @@ const Header = () => {
         }
         return false;
     };
+
+    const handleLogout = async (e) => {
+        setLoading(true);
+        e.preventDefault(); 
+        e.stopPropagation();    
+
+        try {
+            const res = await logoutUser(); 
+            if (res.status === 200) {
+                setUser(null); 
+                navigate("/login");
+                toast.success("Logout successful!");
+            }
+        } catch (error) {
+            toast.error("Logout failed. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (          
     <header className="bg-background border-b border-border sticky top-0 z-10">
@@ -75,12 +100,69 @@ const Header = () => {
                             ))
                         )}
                     </ul>
+                    {user && (
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                            <Avatar className="h-8 w-8 ring-2 ring-background transition-all duration-200 hover:opacity-90">
+                                <AvatarImage src={user?.photo?.data} alt={user?.name} />
+                                <AvatarFallback            className="bg-muted">
+                                    {user?.name?.charAt(0)}
+                                </AvatarFallback>
+                            </Avatar>
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-48">
+                            <div className="p-4 text-center">
+                                <h2 className="text-lg font-semibold text-foreground">{user?.name}</h2>
+                                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                            </div>
+                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2">
+                                <Link to="/profile" className="w-full h-full flex items-center gap-2">
+                                    <span className="text-muted-foreground">Profile</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2" onClick={handleLogout}>
+                                Logout
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    )}
                     <ModeToggle />
+
                 </div>
             </nav>
                 
             {/* Mobile Navigation - Burger Menu */}
             <div className="md:hidden flex items-center gap-4">
+            {user && (
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                            <Avatar className="h-8 w-8 ring-2 ring-background transition-all duration-200 hover:opacity-90">
+                                <AvatarImage src={user?.photo?.data} alt={user?.name} />
+                                <AvatarFallback            className="bg-muted">
+                                    {user?.name?.charAt(0)}
+                                </AvatarFallback>
+                            </Avatar>
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-48">
+                            <div className="p-4 text-center">
+                                <h2 className="text-lg font-semibold text-foreground">{user?.name}</h2>
+                                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                            </div>
+                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2">
+                                <Link to="/profile" className="w-full h-full flex items-center gap-2">
+                                    <span className="text-muted-foreground">Profile</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2" onClick={handleLogout}>
+                                {loading ? "Logging out..." : "Logout"}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    )}
                 <ModeToggle />
                 <Sheet open={isOpen} onOpenChange={setIsOpen}>                         
                     <SheetTrigger asChild>
