@@ -1,7 +1,10 @@
 import express from 'express';
 
 // Import the user controller
-import { loginUser, registerUser } from '../controllers/user.controller.js';
+import { getMe, loginUser, registerUser } from '../controllers/user.controller.js';
+
+// Import the authenticate middleware
+import { authenticate } from '../middleware/authenticate.middleware.js';
 
 const router = express.Router();
 
@@ -10,6 +13,9 @@ router.post('/register', registerUser);
 
 // Login a user
 router.post('/login', loginUser);
+
+// Get user details (protected route)
+router.get('/me', authenticate, getMe);
 
 
 export default router;

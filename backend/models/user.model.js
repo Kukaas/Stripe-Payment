@@ -20,3 +20,18 @@ export const getUserByEmail = async (email) => {
 
     return user[0];
 }
+
+export const getUserById = async (id) => {
+    const [user] = await promisePool.query(
+        `SELECT * FROM users WHERE id = ?`,
+        [id]
+    );
+
+    if (user.length === 0) {
+        return null; // User not found
+    }
+    // Exclude password from the returned user object
+    delete user[0].password;
+
+    return user[0];
+}

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import promisePool from "../config/db.config.js";
-import { createUser, getUserByEmail } from "../models/user.model.js";
+import { createUser, getUserByEmail, getUserById } from "../models/user.model.js";
 import { generateJWT } from "../utils/genrateJWT.js";
 
 export const registerUser = async (req, res) => {
@@ -54,6 +54,8 @@ export const loginUser = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production", // Set to true if using HTTPS
             sameSite: "Strict",
+            maxAge: 24 * 60 * 60 * 1000, // 1 day
+            path: "/"
         });
 
         res.status(200).json({ message: "Login successful", user: {
@@ -66,5 +68,21 @@ export const loginUser = async (req, res) => {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
         
+    }
+}
+
+export const getMe = async (req, res) => {
+    try {
+        const userId = req.user.id; // Get user ID from the token
+        const user = await getUserById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({ user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
     }
 }

@@ -9,6 +9,7 @@ import CustomButton from "../CustomButton";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "@/lib/hooks/api/authApi";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/hooks/AuthContext";
 
 // Define the form schema with Zod for validation
 const formSchema = z.object({
@@ -22,6 +23,7 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
+    const {setUser} = useAuth();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -50,6 +52,7 @@ export function LoginForm() {
 
             if(res.status === 200) {
               navigate("/dashboard");
+              setUser(res.data.user);
               toast.success("Login successful!");
             }
         } catch (error) {
