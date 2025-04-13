@@ -101,7 +101,8 @@ const Subscription = () => {
                                                 </li>
                                             ))}
                                         </ul>
-                                    </div>                                      <SubscribeButton 
+                                    </div>                                      
+                                    <SubscribeButton 
                                         priceId={plan.priceId} 
                                         className={`w-full rounded-md ${
                                             selectedPlan === plan.id
