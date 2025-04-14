@@ -48,10 +48,18 @@ const SubscribeButton = ({priceId}) => {    const [isLoading, setIsLoading] = us
                 
                 // Refresh user data using the AuthContext function instead of page reload
                 await refreshUserData();
-                setIsLoading(false);
-            } else {
+                setIsLoading(false);           } else {
                 // Standard checkout flow for new subscriptions
-                const sessionUrl = await createCheckoutSession(priceId, user.id);
+                // We need to bypass the free trial if:
+                // 1. User has used a trial before OR
+                // 2. User has an active subscription OR
+                // 3. User is currently in a trial
+                const isChangingPlan = 
+                    (user?.has_used_trial === 1 || user?.has_used_trial === true) || // Has used trial before
+                    (user?.is_subscribed === 1 || user?.is_subscribed === true) ||   // Has active subscription
+                    (user?.is_in_trial === 1 || user?.is_in_trial === true);         // Is in trial period
+                
+                const sessionUrl = await createCheckoutSession(priceId, user.id, isChangingPlan);
     
                 if (sessionUrl) {
                     window.location.href = sessionUrl;
@@ -73,24 +81,24 @@ const SubscribeButton = ({priceId}) => {    const [isLoading, setIsLoading] = us
             });
             setIsLoading(false);
         }
-    }
-
-    // Determine button text based on subscription status
+    }    // Determine button text based on subscription status
     const getButtonText = () => {
         if (isCurrentPlan) {
             return "Current Plan";
         }
         
-        // If the basic plan and user hasn't used a trial before
+        // If user has any active subscription, always show "Change Plan"
+        if (subscription) {
+            return "Change Plan";
+        }
+        
+        // Only show "Start Free Trial" if it's the basic plan, user has no subscription,
+        // and they haven't used their trial before
         const isBasicPlan = priceId === "price_1RDOtA06eeOxQrFFHWKZNhxj";
         const hasUsedTrial = user?.has_used_trial === 1 || user?.has_used_trial === true;
         
         if (isBasicPlan && !hasUsedTrial) {
             return "Start Free Trial";
-        }
-        
-        if (subscription) {
-            return "Change Plan";
         }
         
         return "Subscribe Now";

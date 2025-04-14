@@ -1,10 +1,11 @@
 import api from "../api";
 
-export const createCheckoutSession = async (priceId, userId) => {
+export const createCheckoutSession = async (priceId, userId, isChangingPlan = false) => {
     try {
         const response = await api.post("/stripe/create-checkout-session", {
             priceId,
-            userId
+            userId,
+            isChangingPlan
         }, {
             withCredentials: true
         });

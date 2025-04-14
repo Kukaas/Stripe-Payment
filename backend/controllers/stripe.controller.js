@@ -8,7 +8,7 @@ dotenv.config();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const createCheckoutSession = async (req, res) => {
-    const { priceId, userId } = req.body;
+    const { priceId, userId, isChangingPlan = false } = req.body;
 
     try {
         const user = await getUserById(userId);
@@ -44,11 +44,15 @@ export const createCheckoutSession = async (req, res) => {
             metadata: {
                 userId: userId,
                 priceId: priceId,
+                isChangingPlan: isChangingPlan ? 'true' : 'false'
             },
         };
 
-        // Check if this is the price ID that should have a trial
-        if (priceId === process.env.STRIPE_PRICE_ID_BASIC && !user.has_used_trial) {
+        // Only apply free trial if:
+        // 1. This is the basic plan
+        // 2. User hasn't used trial before
+        // 3. This is NOT a plan change (user doesn't have an active subscription)
+        if (priceId === process.env.STRIPE_PRICE_ID_BASIC && !user.has_used_trial && !isChangingPlan) {
             sessionConfig.subscription_data = {
                 trial_period_days: 7,
             };
@@ -239,8 +243,19 @@ export const handleStripeWebhook = async (req, res) => {
             // Update user's subscription status in your database
             const userId = session.metadata.userId;
             const priceId = session.metadata.priceId;
-            
-            try {
+              try {
+                // Determine if we need to update has_used_trial
+                const shouldUpdateHasUsedTrial = isInTrial && subscription.trial_start && subscription.trial_end;
+                
+                // If this is a trial subscription, also update has_used_trial to true
+                if (shouldUpdateHasUsedTrial) {
+                    // Direct database update for has_used_trial
+                    await promisePool.query(
+                        `UPDATE users SET has_used_trial = TRUE WHERE id = ?`,
+                        [userId]
+                    );
+                }
+                
                 await updateUserSubscription(
                     userId,
                     {

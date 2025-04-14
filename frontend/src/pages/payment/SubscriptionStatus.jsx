@@ -24,7 +24,7 @@ const SubscriptionStatus = () => {
                 </CardContent>
                 <CardFooter>
                     <Button asChild className="w-full">
-                        <Link to="/payments">View Plans</Link>
+                        <Link to="/payment">View Plans</Link>
                     </Button>
                 </CardFooter>
             </Card>
