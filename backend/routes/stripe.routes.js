@@ -1,5 +1,5 @@
 import express from 'express';
-import { createCheckoutSession, handleStripeWebhook } from '../controllers/stripe.controller.js';
+import { cancelSubscription, createCheckoutSession, handleStripeWebhook } from '../controllers/stripe.controller.js';
 
 const router = express.Router();
 
@@ -7,5 +7,7 @@ const router = express.Router();
 router.post('/webhook', handleStripeWebhook);
 
 router.post('/create-checkout-session', createCheckoutSession);
+
+router.post('/cancel-subscription', cancelSubscription);
 
 export default router;

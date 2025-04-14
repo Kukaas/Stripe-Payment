@@ -16,6 +16,22 @@ export const createCheckoutSession = async (priceId, userId) => {
     }
 };
 
+export const cancelSubscription = async (userId) => {
+    try {
+        const response = await api.post("/stripe/cancel-subscription", {
+            userId
+        }, {
+            withCredentials: true
+        });
+        
+        return response.data;
+    }
+    catch (error) {
+        console.error("Error canceling subscription:", error);
+        throw error;
+    }
+}
+
 export const getSubscriptionDetails = async () => {
     try {
         const response = await api.get("/stripe/subscription", {

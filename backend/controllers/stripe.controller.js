@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import dotenv from "dotenv";
 import { getUserById, updateUserSubscription } from "../models/user.model.js";
+import promisePool from "../config/db.config.js";
 
 dotenv.config();
 
@@ -61,6 +62,47 @@ export const createCheckoutSession = async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 }
+
+export const cancelSubscription = async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      const user = await getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (!user.stripe_subscription_id) {
+        return res.status(400).json({ 
+          error: "No active subscription found" 
+        });
+      }
+
+      const subscription = await stripe.subscriptions.update(
+        user.stripe_subscription_id,
+        { cancel_at_period_end: true }
+      );
+
+      await promisePool.query(
+        `UPDATE users
+         SET stripe_plan_status = ?
+         WHERE id = ?`,
+        ['canceled', userId]
+      );
+      
+      res.status(200).json({
+        message: "Subscription canceled successfully",
+        cancellation_date: new Date(subscription.current_period_end * 1000),
+        subscription: {
+          status: subscription.status,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end
+        }
+      });
+    } catch (error) {
+      console.error("Error canceling subscription:", error);
+      res.status(500).json({ error: "Failed to cancel subscription" });
+    }
+};
 
 export const handleStripeWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
