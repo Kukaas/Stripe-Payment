@@ -52,11 +52,6 @@ export function RegisterForm() {
         try {
             const { name, email, password } = values;
 
-            if (password !== values.confirmPassword) {
-                toast.error("Passwords do not match.");
-                return;
-            }
-
             // Simulate an API call for registration
             const res = await registerUser(name, email, password);
 
@@ -89,6 +84,7 @@ export function RegisterForm() {
               placeholder="Enter your full name"
               field={field}
               required
+              error={form.formState.errors.name?.message}
             />
           )}
         />
@@ -103,6 +99,7 @@ export function RegisterForm() {
               placeholder="Enter your email"
               field={field}
               required
+              error={form.formState.errors.email?.message}
             />
           )}
         />
@@ -117,6 +114,7 @@ export function RegisterForm() {
               placeholder="Create a password"
               field={field}
               required
+              error={form.formState.errors.password?.message}
             />
           )}
         />
@@ -131,6 +129,7 @@ export function RegisterForm() {
               placeholder="Confirm your password"
               field={field}
               required
+              error={form.formState.errors.confirmPassword?.message}
             />
           )}
         />

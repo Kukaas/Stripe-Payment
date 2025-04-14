@@ -30,6 +30,7 @@ const FormInput = forwardRef(({
   labelClassName,
   hideLabel = false,
   required = false,
+  error,
   ...props
 }, ref) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -94,7 +95,9 @@ const FormInput = forwardRef(({
         )}
       </div>
       
-      <FormMessage />
+      <FormMessage className="flex justify-start">
+        {error && <span>{error}</span>}
+      </FormMessage>
     </FormItem>
   );
 });

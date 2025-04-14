@@ -43,11 +43,6 @@ export function LoginForm() {
         try {
             const { email, password } = values;
 
-            if (!email || !password) {
-                toast.error("Please fill in all fields.");
-                return;
-            }
-
             const res = await loginUser(email, password);
 
             if(res.status === 200) {
@@ -82,6 +77,7 @@ export function LoginForm() {
               placeholder="Enter your email" 
               field={field}
               required
+              error={form.formState.errors.email?.message}
             />
           )}
         />
@@ -96,6 +92,7 @@ export function LoginForm() {
               placeholder="Enter your password"
               field={field}
               required
+              error={form.formState.errors.password?.message}
             />
           )}
         />
