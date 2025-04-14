@@ -61,11 +61,19 @@ const SubscribeButton = ({priceId}) => {
         if (isCurrentPlan) {
             return "Current Plan";
         }
-        if (subscription) {
-            return "Change Plan";
-        } if (priceId === "price_1RDOtA06eeOxQrFFHWKZNhxj") {
+        
+        // If the basic plan and user hasn't used a trial before
+        const isBasicPlan = priceId === "price_1RDOtA06eeOxQrFFHWKZNhxj";
+        const hasUsedTrial = user?.has_used_trial === 1 || user?.has_used_trial === true;
+        
+        if (isBasicPlan && !hasUsedTrial) {
             return "Start Free Trial";
         }
+        
+        if (subscription) {
+            return "Change Plan";
+        }
+        
         return "Subscribe Now";
     };
 

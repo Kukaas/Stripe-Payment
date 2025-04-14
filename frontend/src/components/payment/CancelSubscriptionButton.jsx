@@ -20,10 +20,12 @@ const CancelSubscriptionButton = () => {
   
   // Don't render if no subscription exists OR subscription is already canceled
   if (!user || 
-      user.is_subscribed !== 1 || 
+      (user.is_subscribed !== 1 && user.is_in_trial !== 1) || 
       user.stripe_plan_status === 'canceled') {
     return null;
   }
+  
+  const isInTrial = user.is_in_trial === 1;
   
   const handleCancelSubscription = async () => {
     try {
@@ -33,7 +35,11 @@ const CancelSubscriptionButton = () => {
       // Close dialog and show success message
       setIsOpen(false);
       
-      toast.success("Subscription canceled successfully");
+      const successMessage = isInTrial 
+        ? "Trial ended successfully" 
+        : "Subscription canceled successfully";
+      
+      toast.success(successMessage);
       
       // Refresh user data to update UI
       if (refreshUserData) {
@@ -41,7 +47,10 @@ const CancelSubscriptionButton = () => {
       }
     } catch (error) {
         console.error("Error canceling subscription:", error);
-        toast.error("Failed to cancel subscription. Please try again.");
+        const errorMessage = isInTrial
+          ? "Failed to end trial. Please try again."
+          : "Failed to cancel subscription. Please try again.";
+        toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -58,10 +67,20 @@ const CancelSubscriptionButton = () => {
     });
   };
   
-  // Button label based on subscription state
-  const buttonLabel = user.stripe_plan_status === 'canceled'
-    ? "Subscription Ending" 
-    : "Cancel Subscription";
+  // Button and dialog content based on subscription state
+  const buttonLabel = isInTrial ? "End Trial" : "Cancel Subscription";
+  const dialogTitle = isInTrial ? "End Trial" : "Cancel Subscription";
+  const dialogDescription = isInTrial
+    ? "Are you sure you want to end your trial? You'll immediately lose access to premium features."
+    : `Are you sure you want to cancel your subscription? You'll still have access until ${formatDate(user.subscription_ends_at)}.`;
+  
+  const warningMessage = isInTrial
+    ? "Ending your trial means you'll immediately lose access to premium features."
+    : "Canceling your subscription means you'll lose access to premium features after the current billing period.";
+  
+  const confirmButtonLabel = isInTrial
+    ? "Yes, End Trial"
+    : "Yes, Cancel Subscription";
   
   return (
     <>
@@ -85,9 +104,9 @@ const CancelSubscriptionButton = () => {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Subscription</DialogTitle>
+            <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel your subscription? You'll still have access until {formatDate(user.subscription_ends_at)}.
+              {dialogDescription}
             </DialogDescription>
           </DialogHeader>
           
@@ -97,21 +116,23 @@ const CancelSubscriptionButton = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                <p>Canceling your subscription means you'll lose access to premium features after the current billing period.</p>
+                <p>{warningMessage}</p>
               </div>
             </div>
           </div>
           
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="mr-2">Keep Subscription</Button>
+              <Button variant="outline" className="mr-2">
+                {isInTrial ? "Continue Trial" : "Keep Subscription"}
+              </Button>
             </DialogClose>
             <Button 
               variant="destructive"
               onClick={handleCancelSubscription}
               disabled={isLoading}
             >
-              {isLoading ? "Canceling..." : "Yes, Cancel Subscription"}
+              {isLoading ? (isInTrial ? "Ending..." : "Canceling...") : confirmButtonLabel}
             </Button>
           </DialogFooter>
         </DialogContent>

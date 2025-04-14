@@ -91,7 +91,7 @@ const SubscriptionStatus = () => {
                         </p>
                     </div>
                 )}
-            </CardContent>
+            </CardContent>         
             <CardFooter className="flex flex-col sm:flex-row gap-2">
                 {!isCanceled && (
                     <>

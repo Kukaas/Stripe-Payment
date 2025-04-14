@@ -19,6 +19,7 @@ export async function createUsersTable() {
         trial_starts_at DATETIME,
         trial_ends_at DATETIME,
         is_in_trial BOOLEAN DEFAULT FALSE,
+        has_used_trial BOOLEAN DEFAULT FALSE,
         subscription_ends_at DATETIME,
         is_subscribed BOOLEAN DEFAULT FALSE,
         stripe_plan_status VARCHAR(100),

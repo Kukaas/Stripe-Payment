@@ -1,6 +1,6 @@
 import api from "@/lib/hooks/api";
 import { Loader2 } from "lucide-react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 
 export const AuthContext = createContext();
 
@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState(null);
+    const isRefreshing = useRef(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -49,6 +50,8 @@ export const AuthProvider = ({ children }) => {
         // Use a state flag to prevent multiple simultaneous refreshes
         if (isRefreshing.current) return;
         
+        isRefreshing.current = true;
+        
         try {
             setLoading(true);
             const response = await api.get("/auth/me", { withCredentials: true });
@@ -59,7 +62,8 @@ export const AuthProvider = ({ children }) => {
                     isActive: response.data.user.is_subscribed,
                     planStatus: response.data.user.stripe_plan_status,
                     subscriptionEndsAt: response.data.user.subscription_ends_at,
-                    priceId: response.data.user.stripe_price_id
+                    priceId: response.data.user.stripe_price_id,
+                    has_used_trial: response.data.user.has_used_trial
                 });
             } else {
                 setSubscription(null);

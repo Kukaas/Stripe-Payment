@@ -48,7 +48,7 @@ export const createCheckoutSession = async (req, res) => {
         };
 
         // Check if this is the price ID that should have a trial
-        if (priceId === process.env.STRIPE_PRICE_ID_BASIC) {
+        if (priceId === process.env.STRIPE_PRICE_ID_BASIC && !user.has_used_trial) {
             sessionConfig.subscription_data = {
                 trial_period_days: 7,
             };
@@ -78,26 +78,121 @@ export const cancelSubscription = async (req, res) => {
         });
       }
 
-      const subscription = await stripe.subscriptions.update(
-        user.stripe_subscription_id,
-        { cancel_at_period_end: true }
-      );
+      // Check if user is in trial or actively subscribed
+      const isInTrial = user.is_in_trial === 1;
 
-      await promisePool.query(
-        `UPDATE users
-         SET stripe_plan_status = ?
-         WHERE id = ?`,
-        ['canceled', userId]
-      );
-      
-      res.status(200).json({
-        message: "Subscription canceled successfully",
-        cancellation_date: new Date(subscription.current_period_end * 1000),
-        subscription: {
-          status: subscription.status,
-          cancelAtPeriodEnd: subscription.cancel_at_period_end
+      try {
+        // First, retrieve the subscription to check its status
+        const subscriptionData = await stripe.subscriptions.retrieve(
+          user.stripe_subscription_id
+        );
+        
+        // Handle based on subscription status
+        if (isInTrial) {
+          // For trial, immediately cancel if not already canceled
+          if (subscriptionData.status !== 'canceled') {
+            await stripe.subscriptions.cancel(user.stripe_subscription_id);
+          }
+          
+          // Clear all trial and subscription data except has_used_trial
+          await promisePool.query(
+            `UPDATE users
+             SET stripe_subscription_id = NULL,
+                 stripe_price_id = NULL,
+                 is_in_trial = FALSE,
+                 subscription_ends_at = NULL,
+                 is_subscribed = FALSE,
+                 stripe_plan_status = NULL,
+                 has_used_trial = TRUE
+             WHERE id = ?`,
+            [userId]
+          );
+          
+          res.status(200).json({
+            message: "Trial ended successfully",
+            subscription: {
+              status: "canceled",
+              canceledImmediately: true
+            }
+          });
+        } else {
+          // For regular subscription, only update if not already canceled
+          if (subscriptionData.status !== 'canceled' && !subscriptionData.cancel_at_period_end) {
+            await stripe.subscriptions.update(
+              user.stripe_subscription_id,
+              { cancel_at_period_end: true }
+            );
+          }
+          
+          // Update database to reflect cancellation status
+          await promisePool.query(
+            `UPDATE users 
+             SET stripe_subscription_id = NULL,
+                 stripe_price_id = NULL,
+                 trial_starts_at = NULL,
+                 trial_ends_at = NULL,
+                 is_in_trial = FALSE,
+                 subscription_ends_at = NULL,
+                 is_subscribed = FALSE,
+                 stripe_plan_status = 'canceled'
+             WHERE id = ?`,
+            [userId]
+          );
+          
+          res.status(200).json({
+            message: "Subscription canceled successfully",
+            cancellation_date: new Date(subscriptionData.current_period_end * 1000),
+            subscription: {
+              status: subscriptionData.status,
+              cancelAtPeriodEnd: true
+            }
+          });
         }
-      });
+      } catch (stripeError) {
+        console.error("Stripe error:", stripeError);
+        
+        // If the subscription doesn't exist in Stripe anymore, clean up the database
+        if (stripeError.type === 'StripeInvalidRequestError' && 
+            stripeError.raw?.message?.includes('No such subscription')) {
+          
+          // Update database based on whether it was a trial or subscription
+          if (isInTrial) {
+            await promisePool.query(
+              `UPDATE users
+               SET stripe_subscription_id = NULL,
+                   stripe_price_id = NULL,
+                   trial_starts_at = NULL,
+                   trial_ends_at = NULL,
+                   is_in_trial = FALSE,
+                   subscription_ends_at = NULL,
+                   is_subscribed = FALSE,
+                   stripe_plan_status = NULL,
+                   has_used_trial = TRUE
+               WHERE id = ?`,
+              [userId]
+            );
+          } else {
+            await promisePool.query(
+              `UPDATE users
+               SET stripe_subscription_id = NULL,
+                   stripe_price_id = NULL,
+                   subscription_ends_at = NULL,
+                   is_subscribed = FALSE,
+                   stripe_plan_status = NULL
+               WHERE id = ?`,
+              [userId]
+            );
+          }
+          
+          return res.status(200).json({
+            message: isInTrial ? "Trial ended successfully" : "Subscription canceled successfully",
+            note: "Subscription was already removed in Stripe, local database updated"
+          });
+        }
+        
+        throw stripeError; // Re-throw for the outer catch block
+      }
+      
     } catch (error) {
       console.error("Error canceling subscription:", error);
       res.status(500).json({ error: "Failed to cancel subscription" });
