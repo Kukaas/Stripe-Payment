@@ -5,10 +5,11 @@ import { publicMenu, userMenu } from "@/lib/menu";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ModeToggle } from "./ThemeToggle";
 import { useAuth } from "@/lib/hooks/AuthContext";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { toast } from "sonner";
 import { logoutUser } from "@/lib/hooks/api/authApi";
+import { User, LogOut, Menu } from "lucide-react";
 
 const Header = () => {
     const {user, setUser} = useAuth();
@@ -99,32 +100,51 @@ const Header = () => {
                                 </li>
                             ))
                         )}
-                    </ul>
+                    </ul>                    
                     {user && (
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                            <Avatar className="h-8 w-8 ring-2 ring-background transition-all duration-200 hover:opacity-90">
-                                <AvatarImage src={user?.photo?.data} alt={user?.name} />
-                                <AvatarFallback            className="bg-muted">
+                        <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-border/30 hover:border-primary/50 transition-all">
+                            <Avatar className="h-full w-full transition-transform duration-300 hover:scale-105">
+                                <AvatarImage src={user?.photo?.data} alt={user?.name} className="object-cover" />
+                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                                     {user?.name?.charAt(0)}
                                 </AvatarFallback>
                             </Avatar>
+                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></span>
                         </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-48">
-                            <div className="p-4 text-center">
-                                <h2 className="text-lg font-semibold text-foreground">{user?.name}</h2>
-                                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                        </DropdownMenuTrigger>                        
+                        <DropdownMenuContent className="w-64 overflow-hidden rounded-lg border border-border/50 shadow-lg animate-in fade-in-80 zoom-in-95">
+                            <div className="p-4 bg-muted/30">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-9 w-9 flex-shrink-0 border-2 border-background">
+                                        <AvatarImage src={user?.photo?.data} alt={user?.name} />
+                                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                                            {user?.name?.charAt(0)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col overflow-hidden">
+                                        <h2 className="text-sm font-semibold text-foreground truncate">{user?.name}</h2>
+                                        <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2">
-                                <Link to="/profile" className="w-full h-full flex items-center gap-2">
-                                    <span className="text-muted-foreground">Profile</span>
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2" onClick={handleLogout}>
-                                Logout
-                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <div className="p-1">
+                                <DropdownMenuItem className="cursor-pointer rounded-md hover:bg-muted focus:bg-muted transition-colors px-3 py-2">
+                                    <Link to="/profile" className="w-full flex items-center gap-2">
+                                        <User className="text-inherit flex-shrink-0" size={16} />
+                                        <span className="font-medium text-sm">Profile</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    className="cursor-pointer rounded-md hover:bg-destructive/10 focus:bg-destructive/10 hover:text-destructive focus:text-destructive transition-colors px-3 py-2 mt-1" 
+                                    onClick={handleLogout}
+                                >
+                                    <LogOut className="text-inherit flex-shrink-0" size={16} />
+                                    <span className="ml-2">{loading ? "Logging out..." : "Logout"}</span>
+                                </DropdownMenuItem>
+                            </div>
                         </DropdownMenuContent>
                     </DropdownMenu>
                     )}
@@ -132,34 +152,52 @@ const Header = () => {
 
                 </div>
             </nav>
-                
-            {/* Mobile Navigation - Burger Menu */}
-            <div className="md:hidden flex items-center gap-4">
-            {user && (
+                  {/* Mobile Navigation - Burger Menu */}
+            <div className="md:hidden flex items-center gap-4">            
+                {user && (
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                            <Avatar className="h-8 w-8 ring-2 ring-background transition-all duration-200 hover:opacity-90">
-                                <AvatarImage src={user?.photo?.data} alt={user?.name} />
-                                <AvatarFallback            className="bg-muted">
-                                    {user?.name?.charAt(0)}
-                                </AvatarFallback>
-                            </Avatar>
-                        </Button>
+                            <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 overflow-hidden border-2 border-border/30 hover:border-primary/50 transition-all">
+                                <Avatar className="h-full w-full transition-transform duration-300 hover:scale-105">
+                                    <AvatarImage src={user?.photo?.data} alt={user?.name} className="object-cover" />
+                                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                        {user?.name?.charAt(0)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full"></span>
+                            </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-48">
-                            <div className="p-4 text-center">
-                                <h2 className="text-lg font-semibold text-foreground">{user?.name}</h2>
-                                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                        <DropdownMenuContent className="w-60 overflow-hidden rounded-lg border border-border/50 shadow-lg animate-in fade-in-80 zoom-in-95">
+                            <div className="p-4 bg-muted/30">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-9 w-9 flex-shrink-0 border-2 border-background">
+                                        <AvatarImage src={user?.photo?.data} alt={user?.name} />
+                                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                                            {user?.name?.charAt(0)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex flex-col overflow-hidden">
+                                        <h2 className="text-sm font-semibold text-foreground truncate">{user?.name}</h2>
+                                        <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2">
-                                <Link to="/profile" className="w-full h-full flex items-center gap-2">
-                                    <span className="text-muted-foreground">Profile</span>
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer text-sm text-muted-foreground hover:bg-muted/50 transition-colors px-4 py-2" onClick={handleLogout}>
-                                {loading ? "Logging out..." : "Logout"}
-                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <div className="p-1">
+                                <DropdownMenuItem className="cursor-pointer rounded-md hover:bg-muted focus:bg-muted transition-colors px-3 py-2">
+                                    <Link to="/profile" className="w-full flex items-center gap-2">
+                                        <User className="text-inherit flex-shrink-0" size={16} />
+                                        <span className="font-medium text-sm">Profile</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    className="cursor-pointer rounded-md hover:bg-destructive/10 focus:bg-destructive/10 hover:text-destructive focus:text-destructive transition-colors px-3 py-2 mt-1" 
+                                    onClick={handleLogout}
+                                >
+                                    <LogOut className="text-inherit flex-shrink-0" size={16} />
+                                    <span className="ml-2">{loading ? "Logging out..." : "Logout"}</span>
+                                </DropdownMenuItem>
+                            </div>
                         </DropdownMenuContent>
                     </DropdownMenu>
                     )}
