@@ -46,15 +46,13 @@ export const createCheckoutSession = async (req, res) => {
                 priceId: priceId,
                 isChangingPlan: isChangingPlan ? 'true' : 'false'
             },
-        };
-
-        // Only apply free trial if:
+        };        // Only apply free trial if:
         // 1. This is the basic plan
         // 2. User hasn't used trial before
         // 3. This is NOT a plan change (user doesn't have an active subscription)
         if (priceId === process.env.STRIPE_PRICE_ID_BASIC && !user.has_used_trial && !isChangingPlan) {
             sessionConfig.subscription_data = {
-                trial_period_days: 7,
+                trial_period_days: 1, // Changed from 7 to 1 day for testing purposes
             };
         }
 
@@ -486,5 +484,34 @@ export const changePlan = async (req, res) => {
   } catch (error) {
     console.error("Error changing plan:", error);
     res.status(500).json({ error: "Failed to change plan" });
+  }
+};
+
+export const createCustomerPortalSession = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    // Get user from database
+    const user = await getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    // Check if user has a Stripe customer ID
+    if (!user.stripe_customer_id) {
+      return res.status(400).json({ error: "No billing account found" });
+    }
+    
+    // Create a billing portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripe_customer_id,
+      return_url: `${process.env.CLIENT_URL}/subscription`,
+    });
+    
+    // Return the URL to the client
+    res.status(200).json({ url: session.url });
+  } catch (error) {
+    console.error("Error creating customer portal session:", error);
+    res.status(500).json({ error: "Failed to create billing portal session" });
   }
 };

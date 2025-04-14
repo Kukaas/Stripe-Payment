@@ -5,9 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import CancelSubscriptionButton from "@/components/payment/CancelSubscriptionButton";
+import { useState } from "react";
+import { createCustomerPortalSession } from "@/lib/hooks/api/stripeApi";
+import { Loader2 } from "lucide-react";
 
 const SubscriptionStatus = () => {
     const { user } = useAuth();
+    const [isLoadingPortal, setIsLoadingPortal] = useState(false);
     
     // If no subscription data is available
     if (!user || user.is_subscribed !== 1) {
@@ -106,12 +110,32 @@ const SubscriptionStatus = () => {
                     <Button asChild className="w-full">
                         <Link to="/payment">Resubscribe</Link>
                     </Button>
-                )}
-                
-                <Button variant="outline" className="w-full sm:w-auto" asChild>
-                    <a href="https://billing.stripe.com/p/login/test_yourportallink" target="_blank" rel="noopener noreferrer">
-                        Manage Billing
-                    </a>
+                )}                  
+                <Button 
+                    variant="outline" 
+                    className="w-full sm:w-auto" 
+                    onClick={async () => {
+                        try {
+                            setIsLoadingPortal(true);
+                            const url = await createCustomerPortalSession(user.id);
+                            // Open in new tab instead of redirecting
+                            window.open(url, '_blank');
+                        } catch (error) {
+                            console.error("Error opening billing portal:", error);
+                        } finally {
+                            setIsLoadingPortal(false);
+                        }
+                    }}
+                    disabled={isLoadingPortal}
+                >
+                    {isLoadingPortal ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                        </>
+                    ) : (
+                        "Manage Billing"
+                    )}
                 </Button>
             </CardFooter>
         </Card>

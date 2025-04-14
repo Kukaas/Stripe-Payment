@@ -61,3 +61,18 @@ export const changePlan = async (userId, newPriceId) => {
         throw error;
     }
 };
+
+export const createCustomerPortalSession = async (userId) => {
+    try {
+        const response = await api.post("/stripe/create-customer-portal-session", {
+            userId
+        }, {
+            withCredentials: true
+        });
+        
+        return response.data.url;
+    } catch (error) {
+        console.error("Error creating customer portal session:", error);
+        throw error;
+    }
+};
