@@ -63,6 +63,8 @@ const SubscribeButton = ({priceId}) => {
         }
         if (subscription) {
             return "Change Plan";
+        } if (priceId === "price_1RDOtA06eeOxQrFFHWKZNhxj") {
+            return "Start Free Trial";
         }
         return "Subscribe Now";
     };

@@ -27,7 +27,8 @@ export const createCheckoutSession = async (req, res) => {
             customerId = customer.id;
         }
 
-        const session = await stripe.checkout.sessions.create({
+        // Base session configuration
+        const sessionConfig = {
             customer: customerId,
             mode: 'subscription',
             payment_method_types: ['card'],
@@ -43,7 +44,16 @@ export const createCheckoutSession = async (req, res) => {
                 userId: userId,
                 priceId: priceId,
             },
-        });
+        };
+
+        // Check if this is the price ID that should have a trial
+        if (priceId === process.env.STRIPE_PRICE_ID_BASIC) {
+            sessionConfig.subscription_data = {
+                trial_period_days: 7,
+            };
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionConfig);
 
         res.status(200).json({ url: session.url });
     } catch (error) {
@@ -70,21 +80,24 @@ export const handleStripeWebhook = async (req, res) => {
             );
             
             let subscriptionEndsAt = null;
+            let trialEndsAt = null;
+            let trialStartsAt = null;
+            let isInTrial = false;
 
+            // Handle subscription end date
             if (subscription.current_period_end) {
-                // Convert from Unix timestamp (seconds) to JavaScript timestamp (milliseconds)
-                const currentPeriodEnd = subscription.current_period_end * 1000;
-                subscriptionEndsAt = new Date(currentPeriodEnd);
+                subscriptionEndsAt = new Date(subscription.current_period_end * 1000);
             } else {
-                console.warn("Missing subscription.current_period_end");
-                
-                // Fallback: set end date to 30 days from now
                 subscriptionEndsAt = new Date();
                 subscriptionEndsAt.setDate(subscriptionEndsAt.getDate() + 30);
             }
             
-            // Format the date correctly for MySQL
-            const formattedDate = subscriptionEndsAt.toISOString().slice(0, 19).replace('T', ' ');
+            // Handle trial period
+            if (subscription.trial_start && subscription.trial_end) {
+                trialStartsAt = new Date(subscription.trial_start * 1000);
+                trialEndsAt = new Date(subscription.trial_end * 1000);
+                isInTrial = subscription.status === 'trialing';
+            }
             
             // Update user's subscription status in your database
             const userId = session.metadata.userId;
@@ -98,7 +111,10 @@ export const handleStripeWebhook = async (req, res) => {
                         stripeSubscriptionId: session.subscription,
                         stripePriceId: priceId,
                         planStatus: subscription.status,
-                        subscriptionEndsAt: formattedDate, // Use formatted date
+                        subscriptionEndsAt: subscriptionEndsAt,
+                        trialStartsAt: trialStartsAt,
+                        trialEndsAt: trialEndsAt,
+                        isInTrial: isInTrial
                     }
                 );
             } catch (err) {
@@ -106,7 +122,45 @@ export const handleStripeWebhook = async (req, res) => {
             }
         }
         
-        // Handle other event types as needed
+        // Handle trial ending webhooks
+        if (event.type === 'customer.subscription.trial_will_end') {
+            // This fires 3 days before trial ends, you could notify the user
+            const subscription = event.data.object;
+            console.log(`Trial ending soon for subscription: ${subscription.id}`);
+            // Add notification logic here if needed
+        }
+        
+        // Handle when subscription actually updates from trial to active
+        if (event.type === 'customer.subscription.updated') {
+            const subscription = event.data.object;
+            
+            // Check if status changed from trialing to active
+            if (subscription.status === 'active' && event.data.previous_attributes?.status === 'trialing') {
+                try {
+                    // Find user by subscription ID
+                    const [users] = await promisePool.query(
+                        `SELECT id FROM users WHERE stripe_subscription_id = ?`,
+                        [subscription.id]
+                    );
+                    
+                    if (users.length > 0) {
+                        const userId = users[0].id;
+                        await updateUserSubscription(
+                            userId,
+                            {
+                                stripeSubscriptionId: subscription.id,
+                                planStatus: subscription.status,
+                                subscriptionEndsAt: new Date(subscription.current_period_end * 1000),
+                                isInTrial: false
+                            }
+                        );
+                    }
+                } catch (err) {
+                    console.error("Error updating subscription after trial:", err);
+                }
+            }
+        }
+        
     } catch (err) {
         console.error(`Webhook Error: ${err.message}`);
         return res.status(400).send(`Webhook Error: ${err.message}`);

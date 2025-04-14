@@ -64,16 +64,36 @@ export const updateUserSubscription = async (userId, subscriptionData) => {
         stripeSubscriptionId, 
         stripePriceId,
         planStatus,
-        subscriptionEndsAt
+        subscriptionEndsAt,
+        trialStartsAt,
+        trialEndsAt,
+        isInTrial
     } = subscriptionData;
 
     try {
-        // Ensure the date is properly formatted for MySQL
-        let formattedDate = subscriptionEndsAt;
+        // Ensure dates are properly formatted for MySQL
+        let formattedSubEnd = subscriptionEndsAt;
+        let formattedTrialStart = trialStartsAt;
+        let formattedTrialEnd = trialEndsAt;
         
-        // If it's a Date object, format it correctly
+        // Format subscription end date
         if (subscriptionEndsAt instanceof Date) {
-            formattedDate = subscriptionEndsAt
+            formattedSubEnd = subscriptionEndsAt
+                .toISOString()
+                .slice(0, 19)
+                .replace('T', ' ');
+        }
+        
+        // Format trial dates if they exist
+        if (trialStartsAt instanceof Date) {
+            formattedTrialStart = trialStartsAt
+                .toISOString()
+                .slice(0, 19)
+                .replace('T', ' ');
+        }
+        
+        if (trialEndsAt instanceof Date) {
+            formattedTrialEnd = trialEndsAt
                 .toISOString()
                 .slice(0, 19)
                 .replace('T', ' ');
@@ -87,6 +107,9 @@ export const updateUserSubscription = async (userId, subscriptionData) => {
                  stripe_plan_status = ?,
                  subscription_ends_at = ?,
                  is_subscribed = 1,
+                 trial_starts_at = ?,
+                 trial_ends_at = ?,
+                 is_in_trial = ?,
                  last_payment_at = NOW() 
              WHERE id = ?`,
             [
@@ -94,7 +117,10 @@ export const updateUserSubscription = async (userId, subscriptionData) => {
                 stripeSubscriptionId,
                 stripePriceId,
                 planStatus,
-                formattedDate,
+                formattedSubEnd,
+                formattedTrialStart,
+                formattedTrialEnd,
+                isInTrial ? 1 : 0,
                 userId
             ]
         );
