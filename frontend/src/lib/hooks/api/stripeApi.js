@@ -44,3 +44,19 @@ export const getSubscriptionDetails = async () => {
         throw error;
     }
 };
+
+export const changePlan = async (userId, newPriceId) => {
+    try {
+        const response = await api.post("/stripe/change-plan", {
+            userId,
+            newPriceId
+        }, {
+            withCredentials: true
+        });
+        
+        return response.data;
+    } catch (error) {
+        console.error("Error changing plan:", error);
+        throw error;
+    }
+};

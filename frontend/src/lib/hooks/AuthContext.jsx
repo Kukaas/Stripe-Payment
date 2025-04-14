@@ -44,34 +44,41 @@ export const AuthProvider = ({ children }) => {
         };
 
         fetchUser();
-    }, []);
-
-    const refreshUserData = async () => {
+    }, []);    const refreshUserData = async () => {
         // Use a state flag to prevent multiple simultaneous refreshes
         if (isRefreshing.current) return;
         
         isRefreshing.current = true;
         
         try {
-            setLoading(true);
+            // Don't set loading to true here, as it causes full re-renders
+            // and may contribute to the infinite loop
             const response = await api.get("/auth/me", { withCredentials: true });
+            
+            // Update user data
             setUser(response.data.user);
             
-            if (response.data.user && response.data.user.is_subscribed) {
-                setSubscription({
-                    isActive: response.data.user.is_subscribed,
-                    planStatus: response.data.user.stripe_plan_status,
-                    subscriptionEndsAt: response.data.user.subscription_ends_at,
-                    priceId: response.data.user.stripe_price_id,
-                    has_used_trial: response.data.user.has_used_trial
-                });
+            // Update subscription data only if it's different from current
+            const userData = response.data.user;
+            
+            if (userData && userData.is_subscribed) {
+                const newSubscriptionData = {
+                    id: userData.stripe_subscription_id, // Make sure ID is included
+                    isActive: userData.is_subscribed,
+                    planStatus: userData.stripe_plan_status,
+                    subscriptionEndsAt: userData.subscription_ends_at,
+                    priceId: userData.stripe_price_id,
+                    has_used_trial: userData.has_used_trial
+                };
+                
+                setSubscription(newSubscriptionData);
             } else {
                 setSubscription(null);
             }
         } catch (error) {
             console.error("Error refreshing user data:", error);
         } finally {
-            setLoading(false);
+            // Only update the refreshing flag, not the loading state
             isRefreshing.current = false;
         }
     };

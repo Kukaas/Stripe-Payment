@@ -1,17 +1,14 @@
-import { createCheckoutSession } from "@/lib/hooks/api/stripeApi";
+import { createCheckoutSession, changePlan } from "@/lib/hooks/api/stripeApi";
 import { Button } from "../ui/button";
 import { useState } from "react";
 import { useAuth } from "@/lib/hooks/AuthContext";
 import { toast } from "sonner";
 
-const SubscribeButton = ({priceId}) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const { user, subscription } = useAuth()
+const SubscribeButton = ({priceId}) => {    const [isLoading, setIsLoading] = useState(false);
+    const { user, subscription, refreshUserData } = useAuth()
     
     // Check if user is already subscribed to this plan
-    const isCurrentPlan = subscription && subscription.priceId === priceId;
-
-    const handleCheckout = async () => {
+    const isCurrentPlan = subscription && subscription.priceId === priceId;    const handleCheckout = async () => {
         if (!user) {
             toast.error({
                 title: "Authentication required",
@@ -32,18 +29,40 @@ const SubscribeButton = ({priceId}) => {
         
         try {
             setIsLoading(true);
-            const sessionUrl = await createCheckoutSession(priceId, user.id);
-
-            if (sessionUrl) {
-                window.location.href = sessionUrl;
-            } else {
-                console.error("Failed to create checkout session");
-                toast.error({
-                    title: "Checkout failed",
-                    description: "Failed to create checkout session. Please try again.",
-                    variant: "destructive",
-                });
+            
+            // Check if user already has any subscription (we need to use the change plan flow)
+            if (subscription && subscription.id) {
+                // Use plan change flow with automatic refund
+                const result = await changePlan(user.id, priceId);
+                
+                toast.success({
+                    title: "Plan Changed Successfully",
+                    description: result.message,
+                });                // If there was a refund, show that info
+                if (result.refund && result.refund.amount > 0) {
+                    toast.info({
+                        title: "Refund Processed",
+                        description: `A refund of $${result.refund.amount.toFixed(2)} has been processed for your previous plan.`,
+                    });
+                }
+                
+                // Refresh user data using the AuthContext function instead of page reload
+                await refreshUserData();
                 setIsLoading(false);
+            } else {
+                // Standard checkout flow for new subscriptions
+                const sessionUrl = await createCheckoutSession(priceId, user.id);
+    
+                if (sessionUrl) {
+                    window.location.href = sessionUrl;
+                } else {
+                    console.error("Failed to create checkout session");
+                    toast.error({
+                        title: "Checkout failed",
+                        description: "Failed to create checkout session. Please try again.",
+                        variant: "destructive",
+                    });
+                }
             }
         } catch (error) {
             console.error("Checkout error:", error);

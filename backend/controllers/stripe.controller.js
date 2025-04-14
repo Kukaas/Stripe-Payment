@@ -305,3 +305,171 @@ export const handleStripeWebhook = async (req, res) => {
 
     res.status(200).json({ received: true });
 }
+
+export const changePlan = async (req, res) => {
+  try {
+    const { userId, newPriceId } = req.body;
+    
+    // Validate required parameters
+    if (!userId || !newPriceId) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+    
+    // Get user information
+    const user = await getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    // Check if user has an active subscription
+    if (!user.stripe_subscription_id) {
+      return res.status(400).json({ error: "No active subscription found" });
+    }
+    
+    // Retrieve the current subscription from Stripe
+    const currentSubscription = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+    
+    // Check if user is in trial
+    const isInTrial = user.is_in_trial === 1 || currentSubscription.status === 'trialing';
+    
+    // If in trial, just update the subscription without refund
+    if (isInTrial) {
+      // Update subscription with new price
+      const updatedSubscription = await stripe.subscriptions.update(
+        user.stripe_subscription_id,
+        {
+          items: [
+            {
+              id: currentSubscription.items.data[0].id,
+              price: newPriceId,
+            },
+          ],
+          // Keep the current trial end date
+          trial_end: currentSubscription.trial_end,
+        }
+      );
+      
+      // Update user record in database
+      await promisePool.query(
+        `UPDATE users
+         SET stripe_price_id = ?
+         WHERE id = ?`,
+        [newPriceId, userId]
+      );
+      
+      return res.status(200).json({
+        message: "Plan updated successfully while in trial period",
+        subscription: {
+          id: updatedSubscription.id,
+          status: updatedSubscription.status,
+          current_period_end: new Date(updatedSubscription.current_period_end * 1000),
+        }
+      });
+    } 
+    // If not in trial, process with refund for remaining time
+    else {
+      // Calculate prorated refund amount
+      const currentPeriodStart = currentSubscription.current_period_start;
+      const currentPeriodEnd = currentSubscription.current_period_end;
+      const currentTime = Math.floor(Date.now() / 1000);
+        // Find the latest invoice for this subscription
+      const invoices = await stripe.invoices.list({
+        subscription: user.stripe_subscription_id,
+        limit: 1,
+        status: 'paid'
+      });
+      
+      let refundAmount = 0;
+      let paymentIntentId = null;
+      
+      // Get the payment intent from the most recent invoice
+      if (invoices.data.length > 0) {
+        const latestInvoice = invoices.data[0];
+        
+        // Make sure the invoice has a payment intent ID
+        if (latestInvoice.payment_intent) {
+          // Get the payment intent details
+          const paymentIntent = await stripe.paymentIntents.retrieve(latestInvoice.payment_intent);
+          
+          if (paymentIntent.status === 'succeeded') {
+            paymentIntentId = paymentIntent.id;
+            
+            // Calculate unused time percentage
+            const totalPeriod = currentPeriodEnd - currentPeriodStart;
+            const unusedTime = currentPeriodEnd - currentTime;
+            const unusedPercentage = unusedTime / totalPeriod;
+            
+            // Calculate refund amount in cents
+            refundAmount = Math.floor(latestInvoice.amount_paid * unusedPercentage);
+            
+            console.log("Refund calculation:", {
+              totalPeriod,
+              unusedTime,
+              unusedPercentage,
+              originalAmount: latestInvoice.amount_paid,
+              refundAmount
+            });
+          }
+        }
+      }
+      
+      // Process refund if applicable
+      if (paymentIntentId && refundAmount > 0) {
+        await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          amount: refundAmount,
+          metadata: {
+            reason: 'Plan change proration',
+            old_subscription_id: user.stripe_subscription_id,
+            old_price_id: user.stripe_price_id,
+            new_price_id: newPriceId,
+            user_id: userId
+          }
+        });
+      }
+      
+      // Cancel the current subscription
+      await stripe.subscriptions.cancel(user.stripe_subscription_id);
+      
+      // Create a new subscription with the new price
+      const newSubscription = await stripe.subscriptions.create({
+        customer: user.stripe_customer_id,
+        items: [
+          {
+            price: newPriceId,
+          },
+        ],
+        metadata: {
+          userId: userId,
+          previousSubscription: user.stripe_subscription_id
+        }
+      });
+      
+      // Update user record in database
+      await promisePool.query(
+        `UPDATE users
+         SET stripe_subscription_id = ?,
+             stripe_price_id = ?,
+             stripe_plan_status = ?
+         WHERE id = ?`,
+        [newSubscription.id, newPriceId, newSubscription.status, userId]
+      );
+      
+      return res.status(200).json({
+        message: "Plan changed successfully with prorated refund",
+        refund: {
+          amount: refundAmount / 100, // Convert cents to dollars for frontend display
+          currency: "usd" // Assuming USD
+        },
+        subscription: {
+          id: newSubscription.id,
+          status: newSubscription.status,
+          current_period_end: new Date(newSubscription.current_period_end * 1000)
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error changing plan:", error);
+    res.status(500).json({ error: "Failed to change plan" });
+  }
+};
